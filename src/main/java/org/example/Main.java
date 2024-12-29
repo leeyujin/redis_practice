@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 public class Main {
     public static void main(String[] args) {
@@ -20,10 +21,43 @@ public class Main {
 
         try (var jedisPool = new JedisPool("127.0.0.1", 6379)) {
             try (Jedis jedis = jedisPool.getResource()) {
-                getspatialPractice(jedis);
-
+                bitmapPractice(jedis);
             }
         }
+    }
+
+    private static void bitmapPractice(Jedis jedis) {
+        String key = "request-somepage-20241229";
+        jedis.setbit(key, 100, true);
+        jedis.setbit(key, 200, true);
+        jedis.setbit(key, 300, true);
+
+        System.out.println(jedis.getbit(key, 100));
+        System.out.println(jedis.getbit(key, 50));
+
+        System.out.println(jedis.bitcount(key));
+
+        // bitmap vs set memory 사용 비교
+        String setKey = "request-somepage-set-20241230";
+        String bitKey = "request-somepage-bit-20241230";
+        Pipeline pipelined = jedis.pipelined();
+        IntStream.range(0, 100000).forEach(i -> {
+            pipelined.sadd(setKey, String.valueOf(i), "1");
+            pipelined.setbit(bitKey, i, true);
+
+            if( i % 1000 == 0) {
+                pipelined.sync();
+            }
+        });
+        pipelined.sync();
+
+        Long memoryUsageSet = jedis.memoryUsage(setKey);
+        Long memoryUsageBit = jedis.memoryUsage(bitKey);
+        // 4248744
+        System.out.println("memoryUsageSet = " + memoryUsageSet);
+        // 16456
+        System.out.println("memoryUsageBit = " + memoryUsageBit);
+        jedis.unlink(setKey, bitKey);
     }
 
     private static void getspatialPractice(Jedis jedis) {
