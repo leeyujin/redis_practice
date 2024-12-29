@@ -1,8 +1,12 @@
 package org.example;
 
+import redis.clients.jedis.GeoCoordinate;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Pipeline;
+import redis.clients.jedis.args.GeoUnit;
+import redis.clients.jedis.params.GeoSearchParam;
+import redis.clients.jedis.resps.GeoRadiusResponse;
 import redis.clients.jedis.resps.Tuple;
 
 import java.util.HashMap;
@@ -16,9 +20,38 @@ public class Main {
 
         try (var jedisPool = new JedisPool("127.0.0.1", 6379)) {
             try (Jedis jedis = jedisPool.getResource()) {
-                sortedSetPractice(jedis);
+                getspatialPractice(jedis);
+
             }
         }
+    }
+
+    private static void getspatialPractice(Jedis jedis) {
+        String key = "stores2:geo";
+        jedis.geoadd(key, 127.029, 37.499, "some1");
+        jedis.geoadd(key, 127.033, 37.491, "some2");
+
+        Double geodist = jedis.geodist(key, "some1", "some2", GeoUnit.M);
+        System.out.println("geodist = " + geodist);
+
+        GeoCoordinate geoCoordinate = new GeoCoordinate(127.031, 37.495);
+        List<GeoRadiusResponse> geosearch = jedis.geosearch(key, geoCoordinate, 500, GeoUnit.M);
+        // 아래 에러가 발생함
+        // Cannot invoke "redis.clients.jedis.GeoCoordinate.getLatitude()" because the return value of "redis.clients.jedis.resps.GeoRadiusResponse.getCoordinate()" is null
+//                geosearch.forEach(response -> {
+//                    System.out.printf("%s, %f %f \n ", response.getMemberByString(), response.getCoordinate().getLatitude(), response.getCoordinate().getLongitude());
+//                });
+
+        // 아래처럼 파라미터 지정해야 coordinate 정보 가져올수 있음
+        List<GeoRadiusResponse> geosearchWithCoord = jedis.geosearch(key,
+                new GeoSearchParam()
+                        .fromLonLat(geoCoordinate)
+                        .byRadius(500, GeoUnit.M)
+                        .withCoord()
+        );
+        geosearchWithCoord.forEach(response -> {
+            System.out.printf("%s, %f %f \n ", response.getMemberByString(), response.getCoordinate().getLatitude(), response.getCoordinate().getLongitude());
+        });
     }
 
     private static void sortedSetPractice(Jedis jedis) {
