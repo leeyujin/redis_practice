@@ -5,6 +5,7 @@ import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Pipeline;
 
 import java.util.List;
+import java.util.Set;
 
 public class Main {
     public static void main(String[] args) {
@@ -13,7 +14,22 @@ public class Main {
 
         try (var jedisPool = new JedisPool("127.0.0.1", 6379)) {
             try (Jedis jedis = jedisPool.getResource()) {
-                blockPop(jedis);
+                jedis.sadd("users:500:follow", "100", "200", "300");
+                jedis.srem("users:500:follow", "100");
+                Set<String> smembers = jedis.smembers("users:500:follow");
+                smembers.forEach(System.out::println);
+
+                boolean sismemberTrue = jedis.sismember("users:500:follow", "200");
+                boolean sismemberFalse = jedis.sismember("users:500:follow", "100");
+                System.out.println("sismemberTrue = " + sismemberTrue);
+                System.out.println("sismemberFalse = " + sismemberFalse);
+
+                System.out.println("SCARD : " + jedis.scard("users:500:follow"));
+
+                jedis.sadd("users:600:follow", "200", "999", "9999");
+                Set<String> sinter = jedis.sinter("users:500:follow", "users:600:follow");
+                System.out.print("SINTER : ");
+                sinter.forEach(System.out::println);
             }
         }
     }
