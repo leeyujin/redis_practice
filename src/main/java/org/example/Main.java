@@ -4,7 +4,9 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Pipeline;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class Main {
@@ -14,9 +16,31 @@ public class Main {
 
         try (var jedisPool = new JedisPool("127.0.0.1", 6379)) {
             try (Jedis jedis = jedisPool.getResource()) {
-                setPractice(jedis);
+                hashPractice(jedis);
             }
         }
+    }
+
+    private static void hashPractice(Jedis jedis) {
+        String key = "users:2:info";
+        jedis.hset(key, "name", "greg2");
+        HashMap<String, String> userInfoMap = new HashMap<>();
+        userInfoMap.put("email", "greg2@gmail.com");
+        userInfoMap.put("phone", "010-1111-2222");
+
+        jedis.hset(key, userInfoMap);
+
+        jedis.hdel(key, "phone");
+
+        String email = jedis.hget(key, "email");
+        System.out.println("email = " + email);
+        Map<String, String> hgetAllResult = jedis.hgetAll(key);
+        hgetAllResult.forEach((k, v) -> {
+            System.out.printf("%s=%s\n", k, v);
+        });
+
+        long visit = jedis.hincrBy(key, "visit", 1);
+        System.out.println("visit = " + visit);
     }
 
     private static void setPractice(Jedis jedis) {
