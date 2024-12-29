@@ -13,14 +13,45 @@ public class Main {
 
         try (var jedisPool = new JedisPool("127.0.0.1", 6379)) {
             try (Jedis jedis = jedisPool.getResource()) {
-//                StringTest(jedis);
-
-                usePipeline(jedis);
+                blockPop(jedis);
             }
         }
     }
 
-    private static void usePipeline(Jedis jedis) {
+    private static void blockPop(Jedis jedis) {
+        List<String> blpop = jedis.blpop(10, "queue:blocking");
+        if (blpop != null) {
+            blpop.forEach(System.out::println);
+        }
+    }
+
+    private static void queuePractice(Jedis jedis) {
+        jedis.rpush("queue2", "aaaa");
+        jedis.rpush("queue2", "bbbb");
+        jedis.rpush("queue2", "cccc");
+
+        List<String> queue2 = jedis.lrange("queue2", 0, -1);
+        queue2.forEach(System.out::println);
+
+        System.out.println(jedis.lpop("queue2"));
+        System.out.println(jedis.lpop("queue2"));
+        System.out.println(jedis.lpop("queue2"));
+    }
+
+    private static void stackPractice(Jedis jedis) {
+        jedis.rpush("stack1", "aaaa");
+        jedis.rpush("stack1", "bbbb");
+        jedis.rpush("stack1", "cccc");
+
+        List<String> stack1 = jedis.lrange("stack1", 0, -1);
+        stack1.forEach(System.out::println);
+
+        System.out.println(jedis.rpop("stack1"));
+        System.out.println(jedis.rpop("stack1"));
+        System.out.println(jedis.rpop("stack1"));
+    }
+
+    private static void useStringPipeline(Jedis jedis) {
         Pipeline pipelined = jedis.pipelined();
         pipelined.set("users:400:email", "greg@fastcampus.co.kr");
         pipelined.set("users:400:name", "greg");
