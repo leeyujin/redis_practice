@@ -3,6 +3,7 @@ package org.example;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Pipeline;
+import redis.clients.jedis.resps.Tuple;
 
 import java.util.HashMap;
 import java.util.List;
@@ -13,12 +14,37 @@ public class Main {
     public static void main(String[] args) {
         System.out.println("Hello world!");
 
-
         try (var jedisPool = new JedisPool("127.0.0.1", 6379)) {
             try (Jedis jedis = jedisPool.getResource()) {
-                hashPractice(jedis);
+                sortedSetPractice(jedis);
             }
         }
+    }
+
+    private static void sortedSetPractice(Jedis jedis) {
+        String key = "game2:scores";
+        HashMap<String, Double> scores = new HashMap<>();
+        scores.put("user1", 100.0);
+        scores.put("user2", 30.0);
+        scores.put("user3", 50.0);
+        scores.put("user4", 80.0);
+        scores.put("user5", 15.0);
+        jedis.zadd(key, scores);
+
+        List<String> zrange = jedis.zrange(key, 0, Long.MAX_VALUE);
+        zrange.forEach(System.out::println);
+
+        List<Tuple> zrangeWithScores = jedis.zrangeWithScores(key, 0, Long.MAX_VALUE);
+        zrangeWithScores.forEach(i -> System.out.printf("%s -> %s \n", i.getElement(), i.getScore()));
+
+        System.out.println(jedis.zcard(key));
+
+        jedis.zincrby(key, 100.0, "user5");
+        List<Tuple> zrangeWithScores2 = jedis.zrangeWithScores(key, 0, Long.MAX_VALUE);
+        zrangeWithScores2.forEach(i -> System.out.printf("%s -> %s \n", i.getElement(), i.getScore()));
+
+        List<Tuple> zrevrange = jedis.zrevrangeWithScores(key, 0, Long.MAX_VALUE);
+        zrevrange.forEach(System.out::println);
     }
 
     private static void hashPractice(Jedis jedis) {
